@@ -42,7 +42,7 @@ function SignInSignUp() {
     const data = { identifier, password };
 
     try {
-      const response = await axios.post(`http://localhost:3000/api/auth/${endpoint}`, data);
+      const response = await axios.post(`http://localhost:8000/api/auth/${endpoint}`, data);
       console.log(response); // Log the response to debug
       if (response.status === 200 || response.status === 201) {
         // Token is handled server-side; no localStorage usage here.
