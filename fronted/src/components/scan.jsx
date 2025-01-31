@@ -1,179 +1,107 @@
-import React, { useRef, useEffect, useState } from "react";
-import * as faceapi from "face-api.js";
-import axios from "axios";
-import "./Scan.css";
+import React, { useState, useRef } from 'react';
+import Webcam from "react-webcam";
+import axios from 'axios';
+import { Button, TextField, List, ListItem, Typography } from '@mui/material';
 
-const Scan = () => {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [loading, setLoading] = useState(true);
-  const [attendanceMarked, setAttendanceMarked] = useState(false);
-  const [registerMode, setRegisterMode] = useState(false);
-  const [studentId, setStudentId] = useState("");
-  const [name, setName] = useState("");
-  const [recognizedInfo, setRecognizedInfo] = useState(null);
+const API_URL = "http://localhost:8000";
 
-  const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000/api";
+function Scan() {
+  const webcamRef = useRef(null);
+  const [name, setName] = useState('');
+  const [attendance, setAttendance] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        console.log("Loading face recognition models...");
-        const MODEL_URL = `${process.env.PUBLIC_URL}/models`;
+  const captureAndSend = async (endpoint) => {
+    const imageSrc = webcamRef.current.getScreenshot();
+    const formData = new FormData();
+    const blob = await fetch(imageSrc).then(res => res.blob());
+    formData.append('file', blob, 'face.jpg');
 
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
-        console.log("All models loaded successfully");
-        setLoading(false);
-        startVideo();
-      } catch (error) {
-        console.error("Error loading models:", error);
-        alert("Failed to load face recognition models. Please try again.");
-      }
-    };
-
-    loadModels();
-  }, []);
-
-  const startVideo = () => {
-    navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then((stream) => {
-        videoRef.current.srcObject = stream;
-      })
-      .catch((err) => {
-        console.error("Error accessing webcam:", err);
-        alert("Unable to access webcam. Please check permissions.");
-      });
-  };
-
-  const handleScan = async () => {
     try {
-      const detections = await faceapi
-        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptors();
-
-      if (detections.length > 0) {
-        const descriptor = Array.from(detections[0].descriptor);
-
-        const response = await axios.post(`${BASE_URL}/attendance/mark`, {
-          faceDescriptor: descriptor,
-        });
-
-        if (response.data.success) {
-          const { name, studentId } = response.data.student;
-          setAttendanceMarked(true);
-          setRecognizedInfo({ name, studentId });
-
-          alert(`Attendance marked successfully for ${name} (${studentId})!`);
-        } else {
-          alert(response.data.message || "Face not recognized. Please try again.");
-        }
-      } else {
-        alert("No face detected. Please ensure proper lighting and try again.");
-      }
+      const response = await axios.post(`${API_URL}/${endpoint}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        params: endpoint === 'register' ? { name } : {}
+      });
+      return response.data;
     } catch (error) {
-      console.error("Error during attendance scanning:", error);
-      alert("An error occurred during attendance scanning. Please try again.");
+      console.error('Error:', error);
+      return null;
     }
   };
 
   const handleRegister = async () => {
-    if (!studentId || !name) {
-      alert("Please enter both student ID and name.");
-      return;
+    setLoading(true);
+    const result = await captureAndSend('register');
+    if (result?.success) {
+      setName('');
+      alert('Registration Successful!');
     }
+    setLoading(false);
+  };
 
-    try {
-      const detection = await faceapi
-        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptor();
-
-      if (detection) {
-        const descriptor = Array.from(detection.descriptor);
-
-        const response = await axios.post(`${BASE_URL}/students/register`, {
-          studentId,
-          name,
-          faceDescriptor: descriptor,
-        });
-
-        if (response.status === 201) {
-          alert(`Student ${name} (${studentId}) registered successfully!`);
-          setStudentId("");
-          setName("");
-        } else {
-          alert(response.data.message || "Failed to register student. Please try again.");
-        }
-      } else {
-        alert("No face detected. Please ensure proper lighting and try again.");
-      }
-    } catch (error) {
-      console.error("Error registering student:", error);
-      alert("An error occurred during student registration. Please try again.");
+  const handleRecognize = async () => {
+    setLoading(true);
+    const result = await captureAndSend('recognize');
+    if (result?.name) {
+      setAttendance(prev => [...prev, {
+        name: result.name,
+        timestamp: new Date().toLocaleString()
+      }]);
     }
+    setLoading(false);
   };
 
   return (
-    <div className="containerr">
-      <h1 className="title">Face Recognition Attendance System</h1>
+    <div style={{ padding: '20px' }}>
+      <Typography variant="h3" gutterBottom>
+        Face Recognition Attendance
+      </Typography>
 
-      {loading ? (
-        <p>Loading face recognition models...</p>
-      ) : (
-        <div className="content">
-          <video ref={videoRef} autoPlay muted className="video" />
-          <canvas ref={canvasRef} className="overlay" />
+      <Webcam
+        audio={false}
+        ref={webcamRef}
+        screenshotFormat="image/jpeg"
+        style={{ width: '640px', height: '480px' }}
+      />
 
-          <div className="controls">
-            {!registerMode ? (
-              <>
-                <button onClick={handleScan} className="btn">
-                  Mark Attendance
-                </button>
-                {attendanceMarked && recognizedInfo && (
-                  <p className="status">
-                    Attendance marked for {recognizedInfo.name} ({recognizedInfo.studentId})
-                  </p>
-                )}
-              </>
-            ) : (
-              <div className="register">
-                <input
-                  type="text"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  placeholder="Enter Student ID"
-                  className="input"
-                />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter Student Name"
-                  className="input"
-                />
-                <button onClick={handleRegister} className="btn">
-                  Register Student
-                </button>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => setRegisterMode(!registerMode)}
-            className="btn switch-mode-btn"
-          >
-            {registerMode ? "Switch to Attendance Mode" : "Switch to Register Mode"}
-          </button>
-        </div>
-      )}
+      <div style={{ margin: '20px 0' }}>
+        <TextField
+          label="Enter Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={loading}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleRegister}
+          disabled={!name || loading}
+          style={{ marginLeft: '10px' }}
+        >
+          {loading ? 'Registering...' : 'Register Face'}
+        </Button>
+
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleRecognize}
+          disabled={loading}
+          style={{ marginLeft: '10px' }}
+        >
+          {loading ? 'Recognizing...' : 'Take Attendance'}
+        </Button>
+      </div>
+
+      <Typography variant="h5">Attendance Records:</Typography>
+      <List>
+        {attendance.map((entry, index) => (
+          <ListItem key={index}>
+            {entry.name} - {entry.timestamp}
+          </ListItem>
+        ))}
+      </List>
     </div>
   );
-};
+}
 
 export default Scan;
