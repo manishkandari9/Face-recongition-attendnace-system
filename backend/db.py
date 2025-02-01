@@ -16,10 +16,4 @@ except Exception as e:
     print(f"MongoDB connection failed: {e}")
 
 
-def get_database():
-    db = client['attendance_system']  # Use your database name here
-    
-    if db is None:
-        raise Exception("Database connection failed.")
-    
-    return db
+

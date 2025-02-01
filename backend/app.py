@@ -1,11 +1,9 @@
 import uvicorn
 from fastapi import FastAPI
 import db  # Import the MongoDB connection
-from routes import user_routes 
 
 app = FastAPI()
 
-app.include_router(user_routes.router, prefix="/api/auth")
 
 
 
