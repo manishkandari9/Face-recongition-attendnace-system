@@ -28,7 +28,7 @@ const subjects = ["Software Engineering", "Android Development","Java Programmin
 function AssignmentManager() {
   const [assignments, setAssignments] = useState([]);
   const [newAssignment, setNewAssignment] = useState({
-    id: "", // Add id field
+    id: "", 
     subject: "",
     title: "",
     description: "",
@@ -57,10 +57,10 @@ function AssignmentManager() {
   };
 
   useEffect(() => {
-    fetchAssignments(); // Initial load of assignments
+    fetchAssignments(); /
   }, []);
 
-  // Handle input field changes
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewAssignment((prev) => ({ ...prev, [name]: value }));
