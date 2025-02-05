@@ -1,9 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 import db  # Import the MongoDB connection
-from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, attendance, users, websocket
-app = FastAPI()
+from fastapi.middleware.cors import CORSMiddlewareapp = FastAPI()
 
 
 
