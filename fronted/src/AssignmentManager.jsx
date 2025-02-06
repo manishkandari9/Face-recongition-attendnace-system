@@ -57,7 +57,7 @@ function AssignmentManager() {
   };
 
   useEffect(() => {
-    fetchAssignments(); /
+    fetchAssignments(); 
   }, []);
 
   
@@ -267,4 +267,4 @@ function AssignmentManager() {
   );
 }
 
-export default AssignmentManager;
+export default AssignmentManager
