@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from ..models.user import User
+from model.user import User
 from ..controllers import auth_controller
 from fastapi.responses import JSONResponse
 
